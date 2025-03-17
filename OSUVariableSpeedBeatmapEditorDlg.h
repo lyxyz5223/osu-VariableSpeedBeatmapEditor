@@ -60,6 +60,7 @@ protected:
 public:
     afx_msg void OnBnClickedBtnSaveFile();
     afx_msg void OnBnClickedBtnSaveFileAs();
+    afx_msg void OnGetMinMaxInfo(MINMAXINFO* lpMMI);
 };
 
 

@@ -67,8 +67,8 @@ COSUVariableSpeedBeatmapEditorDlg::COSUVariableSpeedBeatmapEditorDlg(CWnd* pPare
 
 COSUVariableSpeedBeatmapEditorDlg::~COSUVariableSpeedBeatmapEditorDlg()
 {
-	CoUninitialize();
 	DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+	CoUninitialize();
 }
 
 void COSUVariableSpeedBeatmapEditorDlg::DoDataExchange(CDataExchange* pDX)
@@ -86,6 +86,7 @@ BEGIN_MESSAGE_MAP(COSUVariableSpeedBeatmapEditorDlg, CDialogEx)
 	ON_MESSAGE(WM_USER, &COSUVariableSpeedBeatmapEditorDlg::OnMsgUser)
 	ON_BN_CLICKED(IDC_BTNSAVEFILE, &COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFile)
 	ON_BN_CLICKED(IDC_BTNSAVEFILEAS, &COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs)
+	ON_WM_GETMINMAXINFO()
 END_MESSAGE_MAP()
 
 
@@ -101,6 +102,9 @@ BOOL COSUVariableSpeedBeatmapEditorDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 主窗口初始化
+	//SetWindowPos(NULL, 0, 0, 600, 450, SWP_NOMOVE);
+
+
 	SHSTOCKICONINFO sii = { 0 };
 	sii.cbSize = sizeof(sii);
 	SHGetStockIconInfo(SIID_FOLDEROPEN, SHGSI_ICON | SHGSI_SMALLICON, &sii);
@@ -195,6 +199,9 @@ HCURSOR COSUVariableSpeedBeatmapEditorDlg::OnQueryDragIcon()
 void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenFile()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	if (beatmapManager->getFileWithPath() != L"")
+		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+
 	//过滤的文件扩展名
 	const TCHAR extsFilter[] = _T("Osu! Beatmap Files (*.osu)|*.osu|")
 		_T("文本文档 (*.txt)|*.txt|")
@@ -360,4 +367,12 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs()
 	CString filePathCStr = FileSelectionDlg.GetPathName();
 	std::wstring filePathWStr = filePathCStr;
 	beatmapManager->saveAs(filePathWStr);
+}
+
+
+void COSUVariableSpeedBeatmapEditorDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	lpMMI->ptMinTrackSize = { 600, 450 };
+	CDialogEx::OnGetMinMaxInfo(lpMMI);
 }
