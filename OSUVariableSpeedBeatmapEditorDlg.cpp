@@ -67,7 +67,19 @@ COSUVariableSpeedBeatmapEditorDlg::COSUVariableSpeedBeatmapEditorDlg(CWnd* pPare
 
 COSUVariableSpeedBeatmapEditorDlg::~COSUVariableSpeedBeatmapEditorDlg()
 {
-	DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+	if (appPtr)
+	{
+		try {
+			HRESULT hRes = appPtr->Quit();
+			if (FAILED(hRes))
+				MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+		}
+		catch (...) {
+			//MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+		}
+	}
+	if (beatmapManager->getFileWithPath() != L"")
+		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
 	CoUninitialize();
 }
 
@@ -199,9 +211,20 @@ HCURSOR COSUVariableSpeedBeatmapEditorDlg::OnQueryDragIcon()
 void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenFile()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	if (appPtr)
+	{
+		try {
+			HRESULT hRes = appPtr->Quit();
+			if (FAILED(hRes))
+				MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+			while (appPtr->Workbooks->Count) Sleep(100);
+		}
+		catch (...) {
+			//MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+		}
+	}
 	if (beatmapManager->getFileWithPath() != L"")
 		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
-
 	//过滤的文件扩展名
 	const TCHAR extsFilter[] = _T("Osu! Beatmap Files (*.osu)|*.osu|")
 		_T("文本文档 (*.txt)|*.txt|")
