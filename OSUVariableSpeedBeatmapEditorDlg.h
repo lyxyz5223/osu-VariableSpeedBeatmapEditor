@@ -12,6 +12,8 @@
 #import "C:\Program Files\Microsoft Office\Root\VFS\ProgramFilesCommonX86\Microsoft Shared\VBA\VBA6\VBE6EXT.OLB"
 #import "C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
 #define MSG_WORKBOOK_AFTER_SAVE 2911
+#define MSG_WORKBOOK_BEFORE_CLOSE 0x622
+
 // COSUVariableSpeedBeatmapEditorDlg 对话框
 class COSUVariableSpeedBeatmapEditorDlg : public CDialogEx
 {
@@ -44,7 +46,6 @@ public:
 	CEdit m_FilePathEdit;
 	afx_msg void OnBnClickedOpenExcel();
 
-    void saveToFile();
 
 	//谱面管理器对象（指针）
 	BeatmapManager* beatmapManager = nullptr;
@@ -61,6 +62,13 @@ public:
     afx_msg void OnBnClickedBtnSaveFile();
     afx_msg void OnBnClickedBtnSaveFileAs();
     afx_msg void OnGetMinMaxInfo(MINMAXINFO* lpMMI);
+    void DeleteTmpFile();
+    void CreateExcelApp();
+private:
+    CSize defaultSize;
+    bool excelHasOpen = false;
+public:
+    afx_msg void OnEnChangeEditfilepath();
 };
 
 
@@ -116,12 +124,31 @@ public:
 
     STDMETHOD(Invoke)(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) override
     {
+        std::cout << "dispIdMember: " << dispIdMember << std::endl;
         //工作簿保存完成
-        if (dispIdMember == /*Excel::DISPID_WORKBOOKOPEN*/2911/*Excel::AppEvents::WorkbookAfterSave*/)
+        if (dispIdMember == /*Excel::DISPID_WORKBOOKOPEN*/MSG_WORKBOOK_AFTER_SAVE/*Excel::AppEvents::WorkbookAfterSave*/)
         {
             std::cout << "Workbook After Save Event Triggered!" << std::endl;
             SendMessage(parent, WM_USER, MSG_WORKBOOK_AFTER_SAVE, MSG_WORKBOOK_AFTER_SAVE);
             return S_OK;
+        }
+        else if (dispIdMember == MSG_WORKBOOK_BEFORE_CLOSE)
+            //Excel::AppEvents::WorkbookBeforeClose
+        {
+            //MessageBox(0, L"WorkbookBeforeClose", L"", 0);
+            std::cout << "Workbook Before Close Event Triggered!" << std::endl;
+            PostMessage(parent, WM_USER, MSG_WORKBOOK_BEFORE_CLOSE, MSG_WORKBOOK_BEFORE_CLOSE);
+            return S_OK;
+        }
+        else if (dispIdMember == 0x621)
+            //Excel::AppEvents::WorkbookBeforeClose
+        {
+            //MessageBox(0, L"WorkbookDeactivate", L"", 0);
+        }
+        else if (dispIdMember == 0x615)
+            //Excel::AppEvents::WorkbookBeforeClose
+        {
+            //MessageBox(0, L"WindowDeactivate", L"", 0);
         }
         return E_NOTIMPL;
     }

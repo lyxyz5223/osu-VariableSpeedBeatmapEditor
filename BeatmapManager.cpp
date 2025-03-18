@@ -25,6 +25,11 @@ bool BeatmapManager::openBeatmap()
 	fstream file(this->fileWithPath, ios::in);
 	if (!file.is_open())
 		return false;
+	beatmapContents.clear();
+	beatmapVector.clear();
+	variableSpeedVector.clear();
+	tagIndexRangeMap.clear();
+
 	wstring currentTag;
 	bool FoundVariableSpeedTag = false;
 	string tmpLineStr;//一行的文本
@@ -204,9 +209,9 @@ bool BeatmapManager::changeContentsByTag(std::wstring tag, std::vector<std::wstr
 	else
 	{
 		//原来铺面的行数多了，需删除多余行
-		beatmapVector.erase(beatmapVector.begin() + tagIndexRange.start + minLen, beatmapVector.begin() + tagIndexRange.start + minLen + sub);
+		beatmapVector.erase(beatmapVector.begin() + tagIndexRange.start + minLen + 1, beatmapVector.begin() + tagIndexRange.start + minLen + sub + 1);
 	}
-	tagIndexRange.end = tagIndexRange.start + (newLargerThanOri ? newLen : oriLen) + 1;
+	tagIndexRange.end = tagIndexRange.start + (newLargerThanOri ? newLen : oriLen);
 	updateBeatmapContents();
 
 	return true;

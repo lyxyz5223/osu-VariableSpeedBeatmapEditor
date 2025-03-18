@@ -6,12 +6,10 @@
 #define IDR_MAINFRAME                   128
 #define IDC_EDITFILEPATH                1002
 #define IDC_BTNOPENFILE                 1003
-#define IDC_BUTTON1                     1004
 #define IDC_OPENEXCEL                   1004
-#define IDC_BUTTON2                     1005
 #define IDC_BTNSAVEFILE                 1005
-#define IDC_BUTTON3                     1006
 #define IDC_BTNSAVEFILEAS               1006
+#define IDC_CHECK1                      1007
 
 // Next default values for new objects
 // 
@@ -19,7 +17,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1006
+#define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

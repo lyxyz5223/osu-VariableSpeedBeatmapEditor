@@ -56,6 +56,14 @@ COSUVariableSpeedBeatmapEditorDlg::COSUVariableSpeedBeatmapEditorDlg(CWnd* pPare
 	: CDialogEx(IDD_OSUVARIABLESPEEDBEATMAPEDITOR_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+#ifdef _DEBUG
+	{
+		AllocConsole();
+		FILE* stream = nullptr;
+		freopen_s(&stream, "CONOUT$", "w", stdout);
+		freopen_s(&stream, "CONOUT$", "w", stderr);
+	}
+#endif // !_DEBUG
 	beatmapManager = new BeatmapManager(); //创建谱面管理器类对象
 	HRESULT hr = CoInitialize(0);
 	if (FAILED(hr))
@@ -67,19 +75,7 @@ COSUVariableSpeedBeatmapEditorDlg::COSUVariableSpeedBeatmapEditorDlg(CWnd* pPare
 
 COSUVariableSpeedBeatmapEditorDlg::~COSUVariableSpeedBeatmapEditorDlg()
 {
-	if (appPtr)
-	{
-		try {
-			HRESULT hRes = appPtr->Quit();
-			if (FAILED(hRes))
-				MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
-		}
-		catch (...) {
-			//MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
-		}
-	}
-	if (beatmapManager->getFileWithPath() != L"")
-		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+	this->DeleteTmpFile();//删除临时文件
 	CoUninitialize();
 }
 
@@ -99,40 +95,11 @@ BEGIN_MESSAGE_MAP(COSUVariableSpeedBeatmapEditorDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNSAVEFILE, &COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFile)
 	ON_BN_CLICKED(IDC_BTNSAVEFILEAS, &COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs)
 	ON_WM_GETMINMAXINFO()
+	ON_EN_CHANGE(IDC_EDITFILEPATH, &COSUVariableSpeedBeatmapEditorDlg::OnEnChangeEditfilepath)
 END_MESSAGE_MAP()
 
-
-// COSUVariableSpeedBeatmapEditorDlg 消息处理程序
-
-BOOL COSUVariableSpeedBeatmapEditorDlg::OnInitDialog()
+void COSUVariableSpeedBeatmapEditorDlg::CreateExcelApp()
 {
-	CDialogEx::OnInitDialog();
-
-	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
-	//  执行此操作
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
-
-	// TODO: 主窗口初始化
-	//SetWindowPos(NULL, 0, 0, 600, 450, SWP_NOMOVE);
-
-
-	SHSTOCKICONINFO sii = { 0 };
-	sii.cbSize = sizeof(sii);
-	SHGetStockIconInfo(SIID_FOLDEROPEN, SHGSI_ICON | SHGSI_SMALLICON, &sii);
-	m_OpenFile.SetIcon(sii.hIcon);// AfxGetApp()->LoadIcon(IDC_ICON);
-
-	CRect rect;
-	GetDlgItem(IDC_EDITFILEPATH)->GetClientRect(&rect);
-	LOGFONT lf;
-	CFont* font = GetDlgItem(IDC_EDITFILEPATH)->GetFont();
-	font->GetLogFont(&lf);
-	//rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2); //设置内容的左边距与上边距，大小自适取
-	rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2  - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight) / 8); //设置内容的左边距与上边距，大小自适取
-	//((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->SetPasswordChar(_T('*')); //设置字符显示为密码模式
-	::SendMessage(((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->m_hWnd, EM_SETRECT, 0, (LPARAM)&rect);
-
-
 	// 创建Excel应用程序对象
 	HRESULT hr = appPtr.CreateInstance(__uuidof(Excel::Application));
 	if (FAILED(hr))
@@ -165,7 +132,46 @@ BOOL COSUVariableSpeedBeatmapEditorDlg::OnInitDialog()
 		MessageBox(HResultToString(hr).c_str(), L"error", MB_ICONERROR);
 		CoUninitAndExit(hr);
 	}
+}
 
+// COSUVariableSpeedBeatmapEditorDlg 消息处理程序
+
+BOOL COSUVariableSpeedBeatmapEditorDlg::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
+	//  执行此操作
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
+
+	// TODO: 主窗口初始化
+	//SetWindowPos(NULL, 0, 0, 600, 450, SWP_NOMOVE);
+
+
+	SHSTOCKICONINFO sii = { 0 };
+	sii.cbSize = sizeof(sii);
+	SHGetStockIconInfo(SIID_FOLDEROPEN, SHGSI_ICON | SHGSI_SMALLICON, &sii);
+	m_OpenFile.SetIcon(sii.hIcon);// AfxGetApp()->LoadIcon(IDC_ICON);
+
+	CRect rect;
+	GetDlgItem(IDC_EDITFILEPATH)->GetClientRect(&rect);
+	LOGFONT lf;
+	CFont* font = GetDlgItem(IDC_EDITFILEPATH)->GetFont();
+	font->GetLogFont(&lf);
+	//rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2); //设置内容的左边距与上边距，大小自适取
+	rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2  - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight) / 8); //设置内容的左边距与上边距，大小自适取
+	//((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->SetPasswordChar(_T('*')); //设置字符显示为密码模式
+	::SendMessage(((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->m_hWnd, EM_SETRECT, 0, (LPARAM)&rect);
+#ifdef _DEBUG
+	m_FilePathEdit.SetWindowText(L"D:\\1Downloads\\test.osu");
+#endif
+
+	CRect winRect;
+	GetWindowRect(&winRect);
+	defaultSize = rect.Size();
+
+	CreateExcelApp();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -211,20 +217,10 @@ HCURSOR COSUVariableSpeedBeatmapEditorDlg::OnQueryDragIcon()
 void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenFile()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if (appPtr)
-	{
-		try {
-			HRESULT hRes = appPtr->Quit();
-			if (FAILED(hRes))
-				MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
-			while (appPtr->Workbooks->Count) Sleep(100);
-		}
-		catch (...) {
-			//MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
-		}
-	}
-	if (beatmapManager->getFileWithPath() != L"")
-		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+	this->DeleteTmpFile();//先删除临时文件
+	excelHasOpen = false;
+
+
 	//过滤的文件扩展名
 	const TCHAR extsFilter[] = _T("Osu! Beatmap Files (*.osu)|*.osu|")
 		_T("文本文档 (*.txt)|*.txt|")
@@ -270,6 +266,8 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenFile()
 void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenExcel()
 {
 	// TODO: 处理打开Excel的代码
+	if (excelHasOpen)
+		return;
 	using namespace std;
 	//获取输入框中的文件路径
 	CString fileWithPathCStr;
@@ -297,15 +295,33 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenExcel()
 		outputTmpFileWStr.pop_back();
 	tmpFile << wstr2str_2ANSI(outputTmpFileWStr);
 	tmpFile.close();
+	try {
+		appPtr->Quit();
+	}
+	catch (...) {
 
+	}
 	try {
 		appPtr->Workbooks->Open(_com_util::ConvertStringToBSTR(wstr2str_2ANSI(tmpFileNameWithPath).c_str()), 0, 0, 2, "", "", 0, Excel::xlWindows, ", ", false, true, 0, true, true, Excel::xlNormalLoad);//0,0,6,0,0,0,0,", ", 1,0,0,0,0,0,0);)
 		//app->Workbooks->Open("D:\\测试文本.txt", 0, 0, 2, "", "", 0, Excel::xlWindows, ", ", false, true, 0, true, true, Excel::xlNormalLoad);//0,0,6,0,0,0,0,", ", 1,0,0,0,0,0,0);)
 		//app->PutVisible(0, Excel::xlNormal);
 		appPtr->PutVisible(0, Excel::xlMaximized);
+		excelHasOpen = true;
 	}
 	catch(...) {
-		CoUninitAndExit(9);
+		try {
+			CreateExcelApp();
+			appPtr->Workbooks->Open(_com_util::ConvertStringToBSTR(wstr2str_2ANSI(tmpFileNameWithPath).c_str()), 0, 0, 2, "", "", 0, Excel::xlWindows, ", ", false, true, 0, true, true, Excel::xlNormalLoad);//0,0,6,0,0,0,0,", ", 1,0,0,0,0,0,0);)
+			//app->Workbooks->Open("D:\\测试文本.txt", 0, 0, 2, "", "", 0, Excel::xlWindows, ", ", false, true, 0, true, true, Excel::xlNormalLoad);//0,0,6,0,0,0,0,", ", 1,0,0,0,0,0,0);)
+			//app->PutVisible(0, Excel::xlNormal);
+			appPtr->PutVisible(0, Excel::xlMaximized);
+			excelHasOpen = true;
+		}
+		catch (...) {
+			cerr << "Error open Excel!" << endl;
+			MessageBox(L"无法打开Excel！", L"Error", MB_ICONERROR);
+			CoUninitAndExit(9);
+		}
 	}
 
 }
@@ -318,6 +334,12 @@ afx_msg LRESULT COSUVariableSpeedBeatmapEditorDlg::OnMsgUser(WPARAM wParam, LPAR
 	case MSG_WORKBOOK_AFTER_SAVE:
 	{
 		OnBnClickedBtnSaveFile();
+		break;
+	}
+	case MSG_WORKBOOK_BEFORE_CLOSE:
+	{
+		excelHasOpen = false;
+		this->DeleteTmpFile();
 		break;
 	}
 	default:
@@ -337,15 +359,19 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFile()
 	fstream tmpFile(tmpFileNameWithPath, ios::in);
 
 	//备份文件
-	if (!hasAskedIfCoverOldBeatmapBackupFile && !CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), TRUE))
+	if (!hasAskedIfCoverOldBeatmapBackupFile)
 	{
-		int res = MessageBox(L"备份文件已存在,是否覆盖当前备份？\n注：此弹窗每次打开文件后仅显示一次", L"?", MB_ICONQUESTION | MB_YESNO);
-		//if (res == IDOK)
-		//	CoverOldBeatmapBackupFile = TRUE;
-		//else
-		//	CoverOldBeatmapBackupFile = FALSE;
-		if (res == IDOK)
-			CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), FALSE);
+		if(!CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), TRUE))
+		{
+			int res = MessageBox(L"备份文件已存在,是否覆盖当前备份？\n注：此弹窗每次打开文件后仅显示一次", L"?", MB_ICONQUESTION | MB_YESNO);
+			//if (res == IDOK)
+			//	CoverOldBeatmapBackupFile = TRUE;
+			//else
+			//	CoverOldBeatmapBackupFile = FALSE;
+			if (res == IDOK)
+				CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), FALSE);
+		}
+		hasAskedIfCoverOldBeatmapBackupFile = TRUE;
 	}
 	//CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), !CoverOldBeatmapBackupFile);
 
@@ -368,7 +394,7 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs()
 {
 	// TODO: 谱面另存为
 
-		//过滤的文件扩展名
+	//过滤的文件扩展名
 	const TCHAR extsFilter[] = _T("Osu! Beatmap Files (*.osu)|*.osu|")
 		_T("文本文档 (*.txt)|*.txt|")
 		_T("All Files (*.*)|*.*||");//';'号间隔多个后缀名
@@ -396,6 +422,36 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs()
 void COSUVariableSpeedBeatmapEditorDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	lpMMI->ptMinTrackSize = { 600, 450 };
+	//lpMMI->ptMinTrackSize = { 600, 450 };
 	CDialogEx::OnGetMinMaxInfo(lpMMI);
+}
+
+void COSUVariableSpeedBeatmapEditorDlg::DeleteTmpFile()
+{
+	if (appPtr)
+	{
+		try {
+			HRESULT hRes = appPtr->Quit();
+			if (FAILED(hRes))
+				MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+			while (appPtr->Workbooks->Count) Sleep(100);
+		}
+		catch (...) {
+			//MessageBox(L"Excel App关闭失败", L"Warning", MB_ICONWARNING);
+		}
+	}
+	if (beatmapManager->getFileWithPath() != L"")
+		DeleteFile((beatmapManager->getFileWithPath() + L".cyf").c_str());
+}
+
+
+void COSUVariableSpeedBeatmapEditorDlg::OnEnChangeEditfilepath()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	excelHasOpen = false;
 }
