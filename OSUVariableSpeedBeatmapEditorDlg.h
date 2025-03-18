@@ -69,6 +69,8 @@ private:
     bool excelHasOpen = false;
 public:
     afx_msg void OnEnChangeEditfilepath();
+    afx_msg void OnExitSizeMove();
+    afx_msg void OnSize(UINT nType, int cx, int cy);
 };
 
 

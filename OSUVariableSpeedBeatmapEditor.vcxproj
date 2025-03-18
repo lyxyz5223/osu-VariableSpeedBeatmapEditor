@@ -213,6 +213,10 @@
     <None Include="res\OSUVariableSpeedBeatmapEditor.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\osu-Logo-Full-Color.png" />
+    <Image Include="res\osu-Logo-Single-Color.bmp" />
+    <Image Include="res\osu-Logo-Single-Color.ico" />
+    <Image Include="res\osu-Logo-Single-Color.png" />
     <Image Include="res\OSUVariableSpeedBeatmapEditor.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

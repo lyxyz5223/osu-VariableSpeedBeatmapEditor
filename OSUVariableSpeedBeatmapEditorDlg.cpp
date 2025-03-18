@@ -96,6 +96,8 @@ BEGIN_MESSAGE_MAP(COSUVariableSpeedBeatmapEditorDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNSAVEFILEAS, &COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFileAs)
 	ON_WM_GETMINMAXINFO()
 	ON_EN_CHANGE(IDC_EDITFILEPATH, &COSUVariableSpeedBeatmapEditorDlg::OnEnChangeEditfilepath)
+	ON_WM_EXITSIZEMOVE()
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 void COSUVariableSpeedBeatmapEditorDlg::CreateExcelApp()
@@ -148,12 +150,18 @@ BOOL COSUVariableSpeedBeatmapEditorDlg::OnInitDialog()
 	// TODO: 主窗口初始化
 	//SetWindowPos(NULL, 0, 0, 600, 450, SWP_NOMOVE);
 
-
+	//打开按钮图标
 	SHSTOCKICONINFO sii = { 0 };
 	sii.cbSize = sizeof(sii);
 	SHGetStockIconInfo(SIID_FOLDEROPEN, SHGSI_ICON | SHGSI_SMALLICON, &sii);
 	m_OpenFile.SetIcon(sii.hIcon);// AfxGetApp()->LoadIcon(IDC_ICON);
 
+	CString mainText;
+	GetDlgItem(IDC_STATIC)->GetWindowText(mainText);
+	GetDlgItem(IDC_STATIC)->SetWindowText(mainText);
+	"cyf的osu!变速谱面编辑器\ncyf专用，开源免费";
+
+	//编辑框垂直居中
 	CRect rect;
 	GetDlgItem(IDC_EDITFILEPATH)->GetClientRect(&rect);
 	LOGFONT lf;
@@ -266,14 +274,23 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenFile()
 void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedOpenExcel()
 {
 	// TODO: 处理打开Excel的代码
-	if (excelHasOpen)
-		return;
 	using namespace std;
 	//获取输入框中的文件路径
 	CString fileWithPathCStr;
 	GetDlgItem(IDC_EDITFILEPATH)->GetWindowText(fileWithPathCStr);
 	wstring fileWithPath = fileWithPathCStr;
 
+	//判断excel是否已经打开，如已打开则直接返回
+	try {
+		::SetForegroundWindow((HWND)appPtr->Application->GetHwnd());
+		appPtr->ActiveWindow->Activate();
+		return;
+	}
+	catch (...) {
+
+	}
+	if (excelHasOpen)
+		return;
 	//创建谱面管理器对象，并打开谱面
 	if (!beatmapManager->openBeatmap(fileWithPath))
 	{
@@ -358,23 +375,25 @@ void COSUVariableSpeedBeatmapEditorDlg::OnBnClickedBtnSaveFile()
 	vector<wstring> variableSpeedVector = beatmapManager->getVariableSpeedVector();
 	fstream tmpFile(tmpFileNameWithPath, ios::in);
 
-	//备份文件
-	if (!hasAskedIfCoverOldBeatmapBackupFile)
+	if (((CButton*)GetDlgItem(IDC_AUTOBACKUP))->GetCheck())
 	{
-		if(!CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), TRUE))
+		//备份文件
+		if (!hasAskedIfCoverOldBeatmapBackupFile)
 		{
-			int res = MessageBox(L"备份文件已存在,是否覆盖当前备份？\n注：此弹窗每次打开文件后仅显示一次", L"?", MB_ICONQUESTION | MB_YESNO);
-			//if (res == IDOK)
-			//	CoverOldBeatmapBackupFile = TRUE;
-			//else
-			//	CoverOldBeatmapBackupFile = FALSE;
-			if (res == IDOK)
-				CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), FALSE);
+			if (!CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), TRUE))
+			{
+				int res = MessageBox(L"备份文件已存在,是否覆盖当前备份？\n注：此弹窗每次打开文件后仅显示一次", L"?", MB_ICONQUESTION | MB_YESNO);
+				//if (res == IDOK)
+				//	CoverOldBeatmapBackupFile = TRUE;
+				//else
+				//	CoverOldBeatmapBackupFile = FALSE;
+				if (res == IDOK)
+					CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), FALSE);
+			}
+			hasAskedIfCoverOldBeatmapBackupFile = TRUE;
 		}
-		hasAskedIfCoverOldBeatmapBackupFile = TRUE;
+		//CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), !CoverOldBeatmapBackupFile);
 	}
-	//CopyFile(fileWithPath.c_str(), (fileWithPath + L".bak").c_str(), !CoverOldBeatmapBackupFile);
-
 	if (!tmpFile.is_open())
 	{
 		MessageBox(L"临时文件打开失败", L"Error", MB_ICONERROR);
@@ -423,6 +442,7 @@ void COSUVariableSpeedBeatmapEditorDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	//lpMMI->ptMinTrackSize = { 600, 450 };
+
 	CDialogEx::OnGetMinMaxInfo(lpMMI);
 }
 
@@ -454,4 +474,32 @@ void COSUVariableSpeedBeatmapEditorDlg::OnEnChangeEditfilepath()
 
 	// TODO:  在此添加控件通知处理程序代码
 	excelHasOpen = false;
+}
+
+
+void COSUVariableSpeedBeatmapEditorDlg::OnExitSizeMove()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	//编辑框垂直居中
+	CRect rect;
+	GetDlgItem(IDC_EDITFILEPATH)->GetClientRect(&rect);
+	LOGFONT lf;
+	CFont* font = GetDlgItem(IDC_EDITFILEPATH)->GetFont();
+	font->GetLogFont(&lf);
+	//rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2); //设置内容的左边距与上边距，大小自适取
+	rect.OffsetRect(0, (rect.Height() - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight)) / 2 - (lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight) / 8); //设置内容的左边距与上边距，大小自适取
+	//((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->SetPasswordChar(_T('*')); //设置字符显示为密码模式
+	::SendMessage(((CEdit*)GetDlgItem(IDC_EDITFILEPATH))->m_hWnd, EM_SETRECT, 0, (LPARAM)&rect);
+
+	CDialogEx::OnExitSizeMove();
+}
+
+
+void COSUVariableSpeedBeatmapEditorDlg::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
+
+	
+
+	// TODO: 在此处添加消息处理程序代码
 }
